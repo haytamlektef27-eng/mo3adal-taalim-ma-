@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>حساب معدل الجذع المشترك - مسار</title>
+    <style>
+        :root { --primary: #2c3e50; --accent: #27ae60; --bg: #f4f7f6; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); padding: 20px; color: #333; }
+        .container { max-width: 1000px; margin: auto; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 5px 25px rgba(0,0,0,0.1); }
+        h2 { text-align: center; color: var(--primary); border-bottom: 3px solid var(--accent); padding-bottom: 10px; }
+        
+        .selector-box { background: #ecf0f1; padding: 20px; border-radius: 10px; margin-bottom: 25px; text-align: center; }
+        select { padding: 10px; width: 250px; border-radius: 5px; border: 1px solid #bdc3c7; font-size: 16px; font-weight: bold; }
+
+        .subject-card { border: 1px solid #e0e0e0; border-radius: 12px; margin-bottom: 15px; background: #fff; transition: 0.3s; }
+        .subject-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        .subject-header { background: #f9f9f9; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; border-radius: 12px 12px 0 0; }
+        .subject-header span { font-weight: bold; color: var(--primary); }
+        .coef-badge { background: var(--accent); color: white; padding: 2px 10px; border-radius: 20px; font-size: 12px; }
+
+        .inputs-row { padding: 15px 20px; display: flex; flex-wrap: wrap; gap: 15px; }
+        .input-item { display: flex; flex-direction: column; align-items: center; }
+        .input-item label { font-size: 11px; margin-bottom: 5px; color: #666; }
+        input { width: 60px; padding: 8px; border: 1px solid #ccc; border-radius: 6px; text-align: center; font-weight: bold; font-size: 15px; }
+        input:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 5px rgba(39, 174, 96, 0.2); }
+
+        .calc-btn { background: var(--primary); color: white; border: none; padding: 15px 30px; width: 100%; border-radius: 10px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 20px; transition: 0.3s; }
+        .calc-btn:hover { background: #1a252f; }
+        
+        #result-display { margin-top: 25px; padding: 20px; border-radius: 10px; text-align: center; font-size: 22px; font-weight: bold; display: none; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>حساب معدل الجذع المشترك (مسار) 🇲🇦</h2>
+
+    <div class="selector-box">
+        <label>اختر الشعبة: </label>
+        <select id="branchSelect" onchange="renderSubjects()">
+            <option value="scientific">جذع مشترك علمي</option>
+            <option value="literary">جذع مشترك آداب</option>
+        </select>
+    </div>
+
+    <div id="subjects-container"></div>
+
+    <button class="calc-btn" onclick="calculateFinalAvg()">احسب المعدل الدوري</button>
+    <div id="result-display"></div>
+    
+    <p style="text-align:center; margin-top: 20px;">
+        <a href="index.html" style="text-decoration:none; color:var(--primary); font-weight:bold;">← العودة للقائمة الرئيسية</a>
+    </p>
+</div>
+
+<script>
+    const data = {
+        scientific: [
+            { n: "الرياضيات", c: 4, f: 3 }, { n: "الفيزياء والكيمياء", c: 4, f: 3 }, { n: "علوم الحياة والأرض", c: 4, f: 3 },
+            { n: "اللغة الفرنسية", c: 4, f: 3 }, { n: "اللغة العربية", c: 2, f: 2 }, { n: "اللغة الإنجليزية", c: 2, f: 2 },
+            { n: "التربية الإسلامية", c: 2, f: 2 }, { n: "الاجتماعيات", c: 2, f: 2 }, { n: "الفلسفة", c: 2, f: 2 },
+            { n: "المعلوميات", c: 2, f: 2 }, { n: "التربية البدنية", c: 2, f: 1 }
+        ],
+        literary: [
+            { n: "اللغة العربية", c: 4, f: 3 }, { n: "الفرنسية", c: 4, f: 3 }, { n: "الاجتماعيات", c: 4, f: 3 },
+            { n: "اللغة الإنجليزية", c: 3, f: 3 }, { n: "التربية الإسلامية", c: 2, f: 2 }, { n: "الفلسفة", c: 2, f: 2 },
+            { n: "الرياضيات", c: 2, f: 2 }, { n: "علوم الحياة والأرض", c: 2, f: 2 }, { n: "الثقافة الفنية", c: 2, f: 2 },
+            { n: "المعلوميات", c: 2, f: 2 }, { n: "التربية البدنية", c: 2, f: 1 }
+        ]
+    };
+
+    function renderSubjects() {
+        const branch = document.getElementById('branchSelect').value;
+        const container = document.getElementById('subjects-container');
+        container.innerHTML = "";
+
+        data[branch].forEach((s, i) => {
+            let inputsHtml = "";
+            for(let j=1; j<=s.f; j++) {
+                inputsHtml += `<div class="input-item"><label>فرض ${j}</label><input type="number" class="s-${i}-exam" step="0.01" max="20"></div>`;
+            }
+            // إضافة خانة الأنشطة المندمجة ديما
+            inputsHtml += `<div class="input-item"><label>أنشطة</label><input type="number" class="s-${i}-act" step="0.01" max="20"></div>`;
+
+            container.innerHTML += `
+                <div class="subject-card">
+                    <div class="subject-header">
+                        <span>${s.n}</span>
+                        <span class="coef-badge">معامل ${s.c}</span>
+                    </div>
+                    <div class="inputs-row">${inputsHtml}</div>
+                </div>`;
+        });
+    }
+
+    function calculateFinalAvg() {
+        const branch = document.getElementById('branchSelect').value;
+        let totalPoints = 0;
+        let totalCoefs = 0;
+
+        data[branch].forEach((s, i) => {
+            let exams = document.querySelectorAll(`.s-${i}-exam`);
+            let act = parseFloat(document.querySelector(`.s-${i}-act`).value) || 0;
+            
+            let examSum = 0, count = 0;
+            exams.forEach(ex => {
+                if(ex.value !== "") { examSum += parseFloat(ex.value); count++; }
+            });
+
+            if(count > 0) {
+                let subAvg = ((examSum / count) + act) / 2;
+                totalPoints += subAvg * s.c;
+                totalCoefs += s.c;
+            }
+        });
+
+        const final = totalPoints / totalCoefs;
+        const display = document.getElementById('result-display');
+        display.style.display = "block";
+        display.style.background = final >= 10 ? "#d4edda" : "#f8d7da";
+        display.style.color = final >= 10 ? "#155724" : "#721c24";
+        display.innerHTML = `المعدل الدوري العام: ${final.toFixed(2)}`;
+    }
+
+    renderSubjects();
+</script>
+</body>
+</html>

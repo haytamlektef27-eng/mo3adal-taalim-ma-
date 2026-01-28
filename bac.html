@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>حاسبة الباكالوريا الاحترافية - مسار</title>
+    <style>
+        :root { --main: #2980b9; --dark: #2c3e50; --accent: #27ae60; --bg: #f8f9fa; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--bg); padding: 15px; color: #333; }
+        .container { max-width: 950px; margin: auto; background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.1); }
+        h2 { text-align: center; color: var(--dark); border-bottom: 4px solid var(--main); padding-bottom: 10px; margin-bottom: 25px; }
+        
+        .setup-box { background: #f1f4f7; padding: 20px; border-radius: 15px; margin-bottom: 25px; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
+        label { font-weight: bold; display: block; margin-bottom: 8px; font-size: 14px; }
+        select, input { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ccc; font-size: 15px; box-sizing: border-box; }
+
+        .subject-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px; }
+        .subject-card { border: 1px solid #e1e8ed; border-radius: 12px; padding: 15px; background: #fff; position: relative; }
+        .subject-name { font-weight: bold; color: var(--main); margin-bottom: 10px; display: flex; justify-content: space-between; }
+        .coef-tag { background: var(--main); color: white; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
+
+        .marks-row { display: flex; gap: 10px; flex-wrap: wrap; }
+        .mark-input { display: flex; flex-direction: column; align-items: center; }
+        .mark-input label { font-size: 11px; color: #777; margin-bottom: 4px; }
+        .mark-input input { width: 55px; text-align: center; padding: 8px; }
+
+        .final-calc-btn { background: var(--dark); color: white; border: none; padding: 18px; width: 100%; border-radius: 12px; font-size: 19px; font-weight: bold; cursor: pointer; margin-top: 25px; transition: 0.3s; }
+        .final-calc-btn:hover { background: var(--main); }
+
+        #result-box { margin-top: 25px; padding: 25px; border-radius: 15px; text-align: center; display: none; border: 2px solid #eee; }
+        .res-val { font-size: 35px; display: block; color: var(--main); margin: 10px 0; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>منظومة حساب الباكالوريا 🇲🇦</h2>
+
+    <div class="setup-box">
+        <div>
+            <label>المستوى الدراسي:</label>
+            <select id="level" onchange="renderSubjects()">
+                <option value="1bac">الأولى باك (سنة الامتحان الجهوي)</option>
+                <option value="2bac">الثانية باك (سنة الامتحان الوطني)</option>
+            </select>
+        </div>
+        <div>
+            <label>الشعبة والمسلك:</label>
+            <select id="branch" onchange="renderSubjects()">
+                <option value="pc">علوم فيزيائية (PC)</option>
+                <option value="svt">علوم الحياة والأرض (SVT)</option>
+                <option value="sm">علوم رياضية (A/B)</option>
+                <option value="sh">علوم إنسانية</option>
+                <option value="adab">الآداب</option>
+            </select>
+        </div>
+    </div>
+
+    <div id="subjects-container" class="subject-grid"></div>
+
+    <div id="global-exams" class="setup-box" style="margin-top:25px;">
+        </div>
+
+    <button class="final-calc-btn" onclick="calculateFinalResult()">حساب المعدل العام للباك</button>
+
+    <div id="result-box"></div>
+</div>
+
+<script>
+    // قاعدة بيانات المعاملات الدقيقة لكل شعبة في المغرب
+    const config = {
+        pc: {
+            "1bac": [
+                {n:"الرياضيات", c:7}, {n:"الفيزياء", c:7}, {n:"SVT", c:5}, {n:"الفلسفة", c:2}, {n:"الإنجليزية", c:2}, {n:"التربية البدنية", c:2}, {n:"التربية الإسلامية", c:2}, {n:"الاجتماعيات", c:2}, {n:"العربية", c:2}
+            ],
+            "2bac": [
+                {n:"الفيزياء والكيمياء", c:7}, {n:"الرياضيات", c:7}, {n:"SVT", c:5}, {n:"الإنجليزية", c:2}, {n:"الفلسفة", c:2}, {n:"التربية البدنية", c:2}
+            ] // الملاحظة: العربية، الاجتماعيات، الإسلاميات تحذف في 2 باك PC لأنها دوزت جهوي
+        },
+        svt: {
+            "2bac": [ {n:"SVT", c:7}, {n:"الفيزياء", c:5}, {n:"الرياضيات", c:5}, {n:"الإنجليزية", c:2}, {n:"الفلسفة", c:2}, {n:"التربية البدنية", c:2} ]
+        },
+        sm: {
+            "2bac": [ {n:"الرياضيات", c:9}, {n:"الفيزياء", c:7}, {n:"الفلسفة", c:2}, {n:"الإنجليزية", c:2}, {n:"التربية البدنية", c:2}, {n:"علوم المهندس/SVT", c:3} ]
+        },
+        sh: {
+            "2bac": [ {n:"الاجتماعيات", c:4}, {n:"اللغة العربية", c:4}, {n:"الفلسفة", c:4}, {n:"اللغة الثانية", c:4}, {n:"الإنجليزية", c:3}, {n:"التربية البدنية", c:2} ]
+        }
+    };
+
+    function renderSubjects() {
+        const lvl = document.getElementById('level').value;
+        const br = document.getElementById('branch').value;
+        const container = document.getElementById('subjects-container');
+        const extra = document.getElementById('global-exams');
+        
+        container.innerHTML = "";
+        let subs = config[br]?.[lvl] || config["pc"][lvl];
+
+        subs.forEach((s, i) => {
+            container.innerHTML += `
+                <div class="subject-card">
+                    <div class="subject-name"><span>${s.n}</span> <span class="coef-tag">معامل ${s.c}</span></div>
+                    <div class="marks-row">
+                        <div class="mark-input"><label>ف1</label><input type="number" class="s-${i}-m" step="0.01"></div>
+                        <div class="mark-input"><label>ف2</label><input type="number" class="s-${i}-m" step="0.01"></div>
+                        <div class="mark-input"><label>أنشطة</label><input type="number" class="s-${i}-a" step="0.01"></div>
+                    </div>
+                </div>`;
+        });
+
+        // إضافة خانات الامتحان الجهوي والوطني
+        if(lvl === "1bac") {
+            extra.innerHTML = `<div><label>نقطة الامتحان الموحد الجهوي (إذا توفرت):</label><input type="number" id="reg-exam" placeholder="00.00"></div>`;
+        } else {
+            extra.innerHTML = `
+                <div><label>معدل الامتحان الجهوي (25%):</label><input type="number" id="reg-final" placeholder="جبتي فالسنة الماضية"></div>
+                <div><label>معدل الامتحان الوطني (50%):</label><input type="number" id="nat-final" placeholder="توقع نقطة الوطني"></div>
+            `;
+        }
+    }
+
+    function calculateFinalResult() {
+        const lvl = document.getElementById('level').value;
+        const br = document.getElementById('branch').value;
+        let totalWeighted = 0, totalC = 0;
+        let subs = config[br]?.[lvl] || config["pc"][lvl];
+
+        subs.forEach((s, i) => {
+            let marks = document.querySelectorAll(`.s-${i}-m`);
+            let act = parseFloat(document.querySelector(`.s-${i}-a`).value) || 0;
+            let sum = 0, count = 0;
+            marks.forEach(m => { if(m.value !== "") { sum += parseFloat(m.value); count++; } });
+            
+            if(count > 0) {
+                let subAvg = ((sum / count) + act) / 2;
+                totalWeighted += subAvg * s.c;
+                totalC += s.c;
+            }
+        });
+
+        let moraqaba = totalWeighted / totalC;
+        let finalBac = 0;
+
+        if(lvl === "1bac") {
+            let reg = parseFloat(document.getElementById('reg-exam').value) || 0;
+            finalBac = (moraqaba + reg) / 2; // معدل السنة الأولى باك
+        } else {
+            let reg = parseFloat(document.getElementById('reg-final').value) || 0;
+            let nat = parseFloat(document.getElementById('nat-final').value) || 0;
+            // القاعدة: 25% مراقبة، 25% جهوي، 50% وطني
+            finalBac = (moraqaba * 0.25) + (reg * 0.25) + (nat * 0.5);
+        }
+
+        const resBox = document.getElementById('result-box');
+        resBox.style.display = "block";
+        resBox.style.borderColor = finalBac >= 10 ? "#27ae60" : "#e74c3c";
+        resBox.innerHTML = `
+            <h3>النتيجة النهائية المتوقعة:</h3>
+            <span class="res-val">${finalBac.toFixed(2)}</span>
+            <p>${finalBac >= 10 ? "مبروك! هاد النقطة كدمن ليك النجاح 🥂" : "هاد المعدل كيعني خاصك تزيد تخدم فالوطني ✍️"}</p>
+            <small>(معدل المراقبة المستمرة لهذه السنة: ${moraqaba.toFixed(2)})</small>
+        `;
+    }
+
+    renderSubjects();
+</script>
+</body>
+</html>
